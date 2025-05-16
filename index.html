@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DNA/RNA to Protein Translator</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    textarea { width: 100%; height: 100px; }
+    pre { background: #f4f4f4; padding: 10px; white-space: pre-wrap; word-wrap: break-word; }
+    .in-frame { background-color: #d0f0c0; }
+  </style>
+</head>
+<body>
+  <h1>DNA/RNA to Protein Translator</h1>
+  <p>Paste your DNA or RNA sequence below:</p>
+  <textarea id="sequence"></textarea>
+  <button onclick="translateSequence()">Translate</button>
+
+  <h2>Translation (Six Reading Frames)</h2>
+  <div id="translations"></div>
+
+  <script>
+    const codonTable = {
+      'TTT': 'F', 'TTC': 'F', 'TTA': 'L', 'TTG': 'L',
+      'CTT': 'L', 'CTC': 'L', 'CTA': 'L', 'CTG': 'L',
+      'ATT': 'I', 'ATC': 'I', 'ATA': 'I', 'ATG': 'M',
+      'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V',
+      'TCT': 'S', 'TCC': 'S', 'TCA': 'S', 'TCG': 'S',
+      'CCT': 'P', 'CCC': 'P', 'CCA': 'P', 'CCG': 'P',
+      'ACT': 'T', 'ACC': 'T', 'ACA': 'T', 'ACG': 'T',
+      'GCT': 'A', 'GCC': 'A', 'GCA': 'A', 'GCG': 'A',
+      'TAT': 'Y', 'TAC': 'Y', 'TAA': '*', 'TAG': '*',
+      'CAT': 'H', 'CAC': 'H', 'CAA': 'Q', 'CAG': 'Q',
+      'AAT': 'N', 'AAC': 'N', 'AAA': 'K', 'AAG': 'K',
+      'GAT': 'D', 'GAC': 'D', 'GAA': 'E', 'GAG': 'E',
+      'TGT': 'C', 'TGC': 'C', 'TGA': '*', 'TGG': 'W',
+      'CGT': 'R', 'CGC': 'R', 'CGA': 'R', 'CGG': 'R',
+      'AGT': 'S', 'AGC': 'S', 'AGA': 'R', 'AGG': 'R',
+      'GGT': 'G', 'GGC': 'G', 'GGA': 'G', 'GGG': 'G'
+    };
+
+    function reverseComplement(seq) {
+      return seq.split('').reverse().map(base => {
+        switch (base) {
+          case 'A': return 'T';
+          case 'T': return 'A';
+          case 'C': return 'G';
+          case 'G': return 'C';
+          default: return base;
+        }
+      }).join('');
+    }
+
+    function translate(dna, frame) {
+      let protein = '';
+      for (let i = frame; i < dna.length - 2; i += 3) {
+        const codon = dna.slice(i, i + 3);
+        protein += codonTable[codon] || '?';
+      }
+      return protein;
+    }
+
+    function translateSequence() {
+      const input = document.getElementById('sequence').value.toUpperCase().replace(/[^AUGCT]/g, '');
+      const dna = input.replace(/U/g, 'T');
+      const revComp = reverseComplement(dna);
+
+      let output = '';
+      for (let i = 0; i < 3; i++) {
+        const isInFrame = (dna.length - i) % 3 === 0;
+        output += `<h3>Forward Frame ${i + 1} ${isInFrame ? '(in-frame)' : ''}</h3>`;
+        output += `<pre class="${isInFrame ? 'in-frame' : ''}">${translate(dna, i)}</pre>`;
+      }
+      for (let i = 0; i < 3; i++) {
+        const isInFrame = (revComp.length - i) % 3 === 0;
+        output += `<h3>Reverse Frame ${i + 1} ${isInFrame ? '(in-frame)' : ''}</h3>`;
+        output += `<pre class="${isInFrame ? 'in-frame' : ''}">${translate(revComp, i)}</pre>`;
+      }
+
+      document.getElementById('translations').innerHTML = output;
+    }
+  </script>
+</body>
+</html>
