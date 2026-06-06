@@ -28,7 +28,7 @@
       border-radius: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
       padding: 20px 24px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .card-title {
@@ -87,8 +87,6 @@
       flex-wrap: wrap;
     }
 
-    .label-inline { font-size: 0.8rem; font-weight: 600; color: #4a5568; }
-
     select {
       font-size: 0.8rem;
       border: 1.5px solid #e2e8f0;
@@ -132,31 +130,11 @@
     /* ── Results ── */
     #results { display: none; }
 
-    .banner {
-      border-radius: 8px;
-      padding: 14px 20px;
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      margin-bottom: 12px;
-    }
-
-    .banner-icon { font-size: 1.4rem; line-height: 1.2; flex-shrink: 0; }
-    .banner-title { font-size: 0.95rem; font-weight: 700; }
-    .banner-sub { font-size: 0.8rem; margin-top: 3px; opacity: 0.85; }
-
-    .banner-synonymous { background: #c6f6d5; color: #22543d; }
-    .banner-missense    { background: #fefcbf; color: #7b341e; }
-    .banner-nonsense    { background: #fed7d7; color: #742a2a; }
-    .banner-frameshift  { background: #fed7d7; color: #742a2a; }
-    .banner-inframe     { background: #bee3f8; color: #1a365d; }
-    .banner-identical   { background: #e9d8fd; color: #44337a; }
-
-    .stats {
+    .seq-stats {
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
 
     .stat {
@@ -170,6 +148,52 @@
 
     .stat b { color: #2d3748; }
     .stat-warn { border-color: #fbb6ce; }
+
+    /* ── Per-frame card ── */
+    .frame-card-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .frame-label {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #2d3748;
+    }
+
+    .frame-offset {
+      font-size: 0.75rem;
+      font-weight: 400;
+      color: #a0aec0;
+      margin-left: 4px;
+    }
+
+    .impact-pill {
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    .pill-synonymous { background: #c6f6d5; color: #22543d; }
+    .pill-missense   { background: #fefcbf; color: #7b341e; }
+    .pill-nonsense   { background: #fed7d7; color: #742a2a; }
+    .pill-frameshift { background: #fed7d7; color: #742a2a; }
+    .pill-inframe    { background: #bee3f8; color: #1a365d; }
+    .pill-stop       { background: #fed7d7; color: #742a2a; }
+    .pill-clean      { background: #c6f6d5; color: #22543d; }
+
+    .frame-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
 
     /* ── Translation panels ── */
     .panel-labels {
@@ -196,6 +220,8 @@
       grid-template-columns: 1fr 1fr;
       gap: 16px;
     }
+
+    .trans-grid.single { grid-template-columns: 1fr; }
 
     .trans-panel {
       overflow-x: auto;
@@ -294,9 +320,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid #edf2f7;
+      padding: 12px 0 0;
     }
 
     .li { display: flex; align-items: center; gap: 5px; font-size: 0.7rem; color: #718096; }
@@ -304,6 +328,7 @@
 
     @media (max-width: 680px) {
       .seq-inputs, .trans-grid, .panel-labels { grid-template-columns: 1fr; }
+      .trans-grid.single { grid-template-columns: 1fr; }
       .example-group { margin-left: 0; width: 100%; }
     }
   </style>
@@ -335,12 +360,6 @@
       </div>
     </div>
     <div class="controls">
-      <span class="label-inline">Reading frame:</span>
-      <select id="frameOffset">
-        <option value="0">+1 &nbsp;(offset 0)</option>
-        <option value="1">+2 &nbsp;(offset 1)</option>
-        <option value="2">+3 &nbsp;(offset 2)</option>
-      </select>
       <button class="btn btn-primary" onclick="analyze()">Analyze</button>
       <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
       <div class="example-group">
@@ -359,23 +378,13 @@
   </div>
 
   <div id="results">
-    <div id="banner" class="banner"></div>
-    <div id="stats" class="stats"></div>
-
+    <div id="seqStats" class="seq-stats"></div>
+    <div id="framesContainer"></div>
     <div class="card">
-      <div class="card-title">Translation Comparison</div>
-      <div class="panel-labels" id="panelLabels">
-        <div class="panel-label label-ref">&#9654; Reference</div>
-        <div class="panel-label label-var">&#9654; Variant</div>
-      </div>
-      <div class="trans-grid" id="transGrid">
-        <div class="trans-panel" id="refPanel"></div>
-        <div class="trans-panel" id="varPanel"></div>
-      </div>
       <div class="legend">
         <div class="li"><div class="ls" style="background:#bfdbfe"></div>Normal codon</div>
         <div class="li"><div class="ls" style="background:#fbbf24"></div>Changed AA</div>
-        <div class="li"><div class="ls" style="background:#f87171"></div>Stop codon (ref)</div>
+        <div class="li"><div class="ls" style="background:#f87171"></div>Stop codon</div>
         <div class="li"><div class="ls" style="background:#e11d48"></div>New stop (variant only)</div>
         <div class="li"><div class="ls" style="background:#c4b5fd"></div>Frameshifted region</div>
       </div>
@@ -405,39 +414,27 @@
   };
 
   // ── Built-in examples ─────────────────────────────────────────────────────
-  // Shared ref: ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC
-  // Frame 0 translation: M-A-M-A-P-R-T-E-E-K-S
+  // Shared ref: ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC  (Frame +1: M-A-M-A-P-R-T-E-E-K-S)
   const EXAMPLES = {
     frameshift: {
-      // Insert C at position 15 → 1 bp insertion → frameshift
-      // Var frame-0 from codon 5: CAG-AAC-TGA(stop!)-GGA-GAA-GTC
       ref: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC',
-      var: 'ATGGCCATGGCGCCCCAGAACTGAGGAGAAGTCC',
-      frame: '0'
+      var: 'ATGGCCATGGCGCCCCAGAACTGAGGAGAAGTCC'  // 1 bp insertion → frameshift
     },
     inframe: {
-      // Delete AGA (codon 5, Arg) → 3 bp deletion → in-frame, loss of R
       ref: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC',
-      var: 'ATGGCCATGGCGCCCACTGAGGAGAAGTCC',
-      frame: '0'
+      var: 'ATGGCCATGGCGCCCACTGAGGAGAAGTCC'       // 3 bp deletion (AGA) → in-frame, loss of R
     },
     missense: {
-      // Last codon TCC(S) → GCC(A): Ser→Ala
       ref: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC',
-      var: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGGCC',
-      frame: '0'
+      var: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGGCC'   // TCC→GCC: Ser→Ala
     },
     nonsense: {
-      // Last codon TCC(S) → TGA(*): Ser→Stop
       ref: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC',
-      var: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTGA',
-      frame: '0'
+      var: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTGA'   // TCC→TGA: Ser→Stop
     },
     synonymous: {
-      // Last codon TCC(S) → TCT(S): silent
       ref: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC',
-      var: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCT',
-      frame: '0'
+      var: 'ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCT'   // TCC→TCT: Ser→Ser (silent)
     }
   };
 
@@ -465,14 +462,12 @@
     const ex = EXAMPLES[key];
     document.getElementById('varSeq').value = ex.var;
     document.getElementById('refSeq').value = ex.ref;
-    document.getElementById('frameOffset').value = ex.frame;
     document.getElementById('examplePicker').value = '';
   }
 
   function clearAll() {
     document.getElementById('varSeq').value = '';
     document.getElementById('refSeq').value = '';
-    document.getElementById('frameOffset').value = '0';
     document.getElementById('errorBox').innerHTML = '';
     document.getElementById('results').style.display = 'none';
   }
@@ -482,181 +477,145 @@
     const errEl = document.getElementById('errorBox');
     errEl.innerHTML = '';
 
-    const vari  = clean(document.getElementById('varSeq').value);
-    const ref   = clean(document.getElementById('refSeq').value);
-    const frame = parseInt(document.getElementById('frameOffset').value);
+    const vari = clean(document.getElementById('varSeq').value);
+    const ref  = clean(document.getElementById('refSeq').value);
 
     if (!vari) {
       errEl.innerHTML = '<div class="error-box">Please enter a sequence or variant read to translate.</div>';
       return;
     }
-    if (vari.length < 3 + frame) {
-      errEl.innerHTML = '<div class="error-box">Sequence is too short for the selected reading frame.</div>';
+    if (vari.length < 3) {
+      errEl.innerHTML = '<div class="error-box">Sequence is too short (minimum 3 bases).</div>';
       return;
     }
 
-    // ── Single-sequence mode (no reference) ───────────────────────────────
-    if (!ref) {
-      const varCodons = getCodons(vari, frame);
-      const varAA     = varCodons.map(c => CODON[c] || '?');
-      const stopIdx   = varAA.indexOf('*');
-      const stopCount = varAA.filter(aa => aa === '*').length;
+    const hasBoth    = ref.length >= 3 && ref !== vari;
+    const isIdentical = ref.length >= 3 && ref === vari;
 
-      // Banner
-      let icon, title, sub, bannerCls;
-      if (stopCount === 0) {
-        icon = '▶'; title = 'Translation Complete';
-        sub = varCodons.length + ' codons — no stop codon detected in frame +' + (frame + 1);
-        bannerCls = 'banner-inframe';
-      } else {
-        icon = '⚑'; title = 'Stop Codon Detected';
-        sub = 'First stop at codon ' + (stopIdx + 1) + ' of ' + varCodons.length +
-              (stopCount > 1 ? ' (' + stopCount + ' total)' : '') +
-              ' — add a reference sequence above to classify impact';
-        bannerCls = 'banner-nonsense';
-      }
-      document.getElementById('banner').className = 'banner ' + bannerCls;
-      document.getElementById('banner').innerHTML =
-        '<span class="banner-icon">' + icon + '</span>' +
-        '<div><div class="banner-title">' + title + '</div>' +
-        '<div class="banner-sub">' + sub + '</div></div>';
-
-      // Stats
-      document.getElementById('stats').innerHTML = [
-        '<div class="stat">Length: <b>' + vari.length + ' bp</b></div>',
-        '<div class="stat">Frame: <b>+' + (frame + 1) + ' (offset ' + frame + ')</b></div>',
-        '<div class="stat">Codons: <b>' + varCodons.length + '</b></div>',
-        stopIdx >= 0 ? '<div class="stat stat-warn">First stop: <b>codon ' + (stopIdx + 1) + '</b></div>' : '',
-        stopCount > 0 ? '<div class="stat stat-warn">Stop codons: <b>' + stopCount + '</b></div>' : '',
+    // Sequence-level stats shown once at the top
+    if (hasBoth) {
+      const lenDiff = vari.length - ref.length;
+      document.getElementById('seqStats').innerHTML = [
+        '<div class="stat">Ref: <b>' + ref.length + ' bp</b></div>',
+        '<div class="stat">Var: <b>' + vari.length + ' bp</b></div>',
+        '<div class="stat">&#916; length: <b>' + (lenDiff >= 0 ? '+' : '') + lenDiff + ' bp</b></div>',
       ].join('');
-
-      // Single panel — full width
-      document.getElementById('panelLabels').innerHTML =
-        '<div class="panel-label label-var">&#9654; Translation &middot; Frame +' + (frame + 1) + ' (offset ' + frame + ')</div>';
-      document.getElementById('transGrid').style.gridTemplateColumns = '1fr';
-      document.getElementById('refPanel').innerHTML = '';
-      document.getElementById('refPanel').style.display = 'none';
-      document.getElementById('varPanel').style.display = 'block';
-      document.getElementById('varPanel').innerHTML =
-        renderPanel(varCodons, varAA, [], false, -1, 'single');
-
-      document.getElementById('results').style.display = 'block';
-      document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
-      return;
-    }
-
-    // ── Dual-sequence mode ────────────────────────────────────────────────
-    if (ref.length < 3 + frame) {
-      errEl.innerHTML = '<div class="error-box">Reference sequence is too short for the selected reading frame.</div>';
-      return;
-    }
-
-    // Restore two-column layout
-    document.getElementById('panelLabels').innerHTML =
-      '<div class="panel-label label-ref">&#9654; Reference</div>' +
-      '<div class="panel-label label-var">&#9654; Variant</div>';
-    document.getElementById('transGrid').style.gridTemplateColumns = '1fr 1fr';
-    document.getElementById('refPanel').style.display = 'block';
-    document.getElementById('varPanel').style.display = 'block';
-
-    // Identical sequences
-    if (ref === vari) {
-      document.getElementById('banner').className = 'banner banner-identical';
-      document.getElementById('banner').innerHTML =
-        '<span class="banner-icon">≡</span><div>' +
-        '<div class="banner-title">Sequences are identical</div>' +
-        '<div class="banner-sub">No variant detected — reference and variant sequences match exactly.</div>' +
-        '</div>';
-      document.getElementById('stats').innerHTML = '';
-      document.getElementById('refPanel').innerHTML = '';
-      document.getElementById('varPanel').innerHTML = '';
-      document.getElementById('results').style.display = 'block';
-      return;
-    }
-
-    const refCodons = getCodons(ref, frame);
-    const varCodons = getCodons(vari, frame);
-    const refAA = refCodons.map(c => CODON[c] || '?');
-    const varAA = varCodons.map(c => CODON[c] || '?');
-
-    const lenDiff = vari.length - ref.length;
-    const diffPos = firstDiffPos(ref, vari);
-    // 0-based codon index where the change begins
-    const fsCodon = Math.max(0, Math.floor(Math.max(0, diffPos - frame) / 3));
-
-    // ── Classify ──────────────────────────────────────────────────────────
-    let type, icon, title, sub, bannerCls;
-
-    if (lenDiff === 0) {
-      const changedCount = refAA.reduce((n, aa, i) => n + (aa !== varAA[i] ? 1 : 0), 0);
-      const newStops     = varAA.filter((aa, i) => aa === '*' && refAA[i] !== '*').length;
-      if (changedCount === 0) {
-        type = 'synonymous'; icon = '✓';
-        title = 'Synonymous Variant';
-        sub   = 'No amino acid change — reading frame intact';
-        bannerCls = 'banner-synonymous';
-      } else if (newStops > 0) {
-        type = 'nonsense'; icon = '⛔';
-        title = 'Nonsense Variant';
-        sub   = 'Premature stop codon introduced (' + newStops + ' new stop) — reading frame intact but protein truncated';
-        bannerCls = 'banner-nonsense';
-      } else {
-        type = 'missense'; icon = '⚠';
-        title = 'Missense Variant';
-        sub   = changedCount + ' amino acid change' + (changedCount > 1 ? 's' : '') + ' — reading frame intact';
-        bannerCls = 'banner-missense';
-      }
-    } else if (Math.abs(lenDiff) % 3 === 0) {
-      type = 'inframe'; icon = 'ℹ';
-      const word = lenDiff > 0 ? 'Insertion' : 'Deletion';
-      const codonsAffected = Math.abs(lenDiff) / 3;
-      title = 'In-frame ' + word;
-      sub   = Math.abs(lenDiff) + ' bp ' + word.toLowerCase() + ' — reading frame preserved (' +
-              codonsAffected + ' codon' + (codonsAffected !== 1 ? 's' : '') + ' net change)';
-      bannerCls = 'banner-inframe';
+    } else if (isIdentical) {
+      document.getElementById('seqStats').innerHTML =
+        '<div class="stat">&#8801; Sequences identical &mdash; no variant detected</div>';
     } else {
-      type = 'frameshift'; icon = '⚡';
-      const word = lenDiff > 0 ? 'Insertion' : 'Deletion';
-      title = 'Frameshift — ' + word;
-      sub   = Math.abs(lenDiff) + ' bp ' + word.toLowerCase() +
-              ' — reading frame disrupted from codon ' + (fsCodon + 1) + ' onwards';
-      bannerCls = 'banner-frameshift';
+      document.getElementById('seqStats').innerHTML =
+        '<div class="stat">Length: <b>' + vari.length + ' bp</b></div>';
     }
 
-    // ── Banner ────────────────────────────────────────────────────────────
-    document.getElementById('banner').className = 'banner ' + bannerCls;
-    document.getElementById('banner').innerHTML =
-      '<span class="banner-icon">' + icon + '</span>' +
-      '<div><div class="banner-title">' + title + '</div>' +
-      '<div class="banner-sub">' + sub + '</div></div>';
-
-    // ── Stats row ─────────────────────────────────────────────────────────
-    const refStopIdx = refAA.indexOf('*');
-    const varStopIdx = varAA.indexOf('*');
-    const changedAAs = lenDiff === 0
-      ? refAA.reduce((n, aa, i) => n + (aa !== varAA[i] ? 1 : 0), 0)
-      : null;
-
-    document.getElementById('stats').innerHTML = [
-      '<div class="stat">Ref: <b>' + ref.length + ' bp</b></div>',
-      '<div class="stat">Var: <b>' + vari.length + ' bp</b></div>',
-      '<div class="stat">&#916; length: <b>' + (lenDiff >= 0 ? '+' : '') + lenDiff + ' bp</b></div>',
-      '<div class="stat">Frame offset: <b>' + frame + '</b></div>',
-      '<div class="stat">Ref codons: <b>' + refCodons.length + '</b></div>',
-      '<div class="stat">Var codons: <b>' + varCodons.length + '</b></div>',
-      changedAAs !== null ? '<div class="stat">Changed AAs: <b>' + changedAAs + '</b></div>' : '',
-      refStopIdx >= 0 ? '<div class="stat">Ref stop: <b>codon ' + (refStopIdx + 1) + '</b></div>' : '',
-      varStopIdx >= 0 ? '<div class="stat stat-warn">Var stop: <b>codon ' + (varStopIdx + 1) + '</b></div>' : '',
-    ].join('');
-
-    // ── Render panels ─────────────────────────────────────────────────────
-    document.getElementById('refPanel').innerHTML =
-      renderPanel(refCodons, refAA, varAA, false, fsCodon, type);
-    document.getElementById('varPanel').innerHTML =
-      renderPanel(varCodons, varAA, refAA, true,  fsCodon, type);
+    // Build all 3 frame sections
+    let html = '';
+    for (let frame = 0; frame < 3; frame++) {
+      html += buildFrameSection(vari, ref, frame, hasBoth);
+    }
+    document.getElementById('framesContainer').innerHTML = html;
 
     document.getElementById('results').style.display = 'block';
     document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  // ── Build one frame card ──────────────────────────────────────────────────
+  function buildFrameSection(vari, ref, frame, hasBoth) {
+    const varCodons = getCodons(vari, frame);
+    const varAA     = varCodons.map(c => CODON[c] || '?');
+    const frameLabel =
+      'Frame +' + (frame + 1) +
+      '<span class="frame-offset">(offset ' + frame + ')</span>';
+
+    let pillHtml, statsHtml, panelsHtml;
+
+    if (!hasBoth) {
+      // ── Single-sequence mode ────────────────────────────────────────────
+      const stopIdx   = varAA.indexOf('*');
+      const stopCount = varAA.filter(aa => aa === '*').length;
+
+      if (stopCount === 0) {
+        pillHtml = '<span class="impact-pill pill-clean">&#10003; No stops &middot; ' + varCodons.length + ' codons</span>';
+      } else {
+        pillHtml = '<span class="impact-pill pill-stop">&#9679; Stop at codon ' + (stopIdx + 1) + (stopCount > 1 ? ' (+' + (stopCount - 1) + ' more)' : '') + '</span>';
+      }
+
+      statsHtml = [
+        '<div class="stat">Codons: <b>' + varCodons.length + '</b></div>',
+        stopIdx >= 0 ? '<div class="stat stat-warn">First stop: <b>codon ' + (stopIdx + 1) + '</b></div>' : '',
+        stopCount > 1 ? '<div class="stat stat-warn">Total stops: <b>' + stopCount + '</b></div>' : '',
+      ].join('');
+
+      panelsHtml =
+        '<div class="trans-grid single">' +
+        '<div class="trans-panel">' + renderPanel(varCodons, varAA, [], false, -1, 'single') + '</div>' +
+        '</div>';
+
+    } else {
+      // ── Dual-sequence mode ──────────────────────────────────────────────
+      const refCodons = getCodons(ref, frame);
+      const refAA     = refCodons.map(c => CODON[c] || '?');
+      const lenDiff   = vari.length - ref.length;
+      const diffPos   = firstDiffPos(ref, vari);
+      const fsCodon   = Math.max(0, Math.floor(Math.max(0, diffPos - frame) / 3));
+
+      // Classify
+      let type, icon, pillCls, pillLabel, sub;
+      if (lenDiff === 0) {
+        const changedCount = refAA.reduce((n, aa, i) => n + (aa !== varAA[i] ? 1 : 0), 0);
+        const newStops     = varAA.filter((aa, i) => aa === '*' && refAA[i] !== '*').length;
+        if (changedCount === 0) {
+          type = 'synonymous'; icon = '&#10003;'; pillCls = 'pill-synonymous'; pillLabel = 'Synonymous';
+          sub = 'No amino acid change';
+        } else if (newStops > 0) {
+          type = 'nonsense'; icon = '&#9940;'; pillCls = 'pill-nonsense'; pillLabel = 'Nonsense';
+          sub = newStops + ' new stop codon' + (newStops > 1 ? 's' : '');
+        } else {
+          type = 'missense'; icon = '&#9888;'; pillCls = 'pill-missense'; pillLabel = 'Missense';
+          sub = changedCount + ' AA change' + (changedCount > 1 ? 's' : '');
+        }
+      } else if (Math.abs(lenDiff) % 3 === 0) {
+        type = 'inframe'; icon = 'i'; pillCls = 'pill-inframe';
+        pillLabel = lenDiff > 0 ? 'In-frame Ins' : 'In-frame Del';
+        sub = Math.abs(lenDiff) / 3 + ' codon' + (Math.abs(lenDiff) / 3 !== 1 ? 's' : '') + ' net change';
+      } else {
+        type = 'frameshift'; icon = '&#9889;'; pillCls = 'pill-frameshift'; pillLabel = 'Frameshift';
+        sub = 'Disrupted from codon ' + (fsCodon + 1);
+      }
+
+      const varStopIdx = varAA.indexOf('*');
+      const changedAAs = lenDiff === 0
+        ? refAA.reduce((n, aa, i) => n + (aa !== varAA[i] ? 1 : 0), 0) : null;
+
+      pillHtml = '<span class="impact-pill ' + pillCls + '">' + icon + ' ' + pillLabel +
+                 (sub ? ' &middot; ' + sub : '') + '</span>';
+
+      statsHtml = [
+        '<div class="stat">Ref codons: <b>' + refCodons.length + '</b></div>',
+        '<div class="stat">Var codons: <b>' + varCodons.length + '</b></div>',
+        changedAAs !== null && changedAAs > 0 ? '<div class="stat">Changed AAs: <b>' + changedAAs + '</b></div>' : '',
+        varStopIdx >= 0 ? '<div class="stat stat-warn">Var stop: <b>codon ' + (varStopIdx + 1) + '</b></div>' : '',
+      ].join('');
+
+      panelsHtml =
+        '<div class="panel-labels">' +
+        '<div class="panel-label label-ref">&#9654; Reference</div>' +
+        '<div class="panel-label label-var">&#9654; Variant</div>' +
+        '</div>' +
+        '<div class="trans-grid">' +
+        '<div class="trans-panel">' + renderPanel(refCodons, refAA, varAA, false, fsCodon, type) + '</div>' +
+        '<div class="trans-panel">' + renderPanel(varCodons, varAA, refAA, true,  fsCodon, type) + '</div>' +
+        '</div>';
+    }
+
+    return '<div class="card">' +
+      '<div class="frame-card-title">' +
+        '<span class="frame-label">' + frameLabel + '</span>' +
+        pillHtml +
+      '</div>' +
+      (statsHtml ? '<div class="frame-stats">' + statsHtml + '</div>' : '') +
+      panelsHtml +
+      '</div>';
   }
 
   // ── Render one translation panel ──────────────────────────────────────────
@@ -676,40 +635,36 @@
         const aa      = aas[i];
         const otherAA = i < otherAAs.length ? otherAAs[i] : null;
 
-        const isStop     = aa === '*';
-        const isNewStop  = isVar && isStop && (otherAA === null || otherAA !== '*');
-        // Frameshift region: only marked in the VARIANT panel
-        const isFs       = isVar && type === 'frameshift' && i >= fsCodon;
-        // In the REFERENCE panel, don't mark codons as "changed" in the frameshift zone —
-        // the reference is correct; it's the variant that shifted.
+        const isStop      = aa === '*';
+        const isNewStop   = isVar && isStop && (otherAA === null || otherAA !== '*');
+        const isFs        = isVar && type === 'frameshift' && i >= fsCodon;
         const inRefFsZone = !isVar && type === 'frameshift' && i >= fsCodon;
-        const isChanged  = !isFs && !inRefFsZone && otherAA !== null && aa !== otherAA;
+        const isChanged   = !isFs && !inRefFsZone && otherAA !== null && aa !== otherAA;
 
         let cls;
-        if (isNewStop)   cls = 'c-newstop';
-        else if (isStop) cls = 'c-stop';
-        else if (isFs)   cls = 'c-fs';
+        if (isNewStop)      cls = 'c-newstop';
+        else if (isStop)    cls = 'c-stop';
+        else if (isFs)      cls = 'c-fs';
         else if (isChanged) cls = 'c-changed';
         else cls = i % 2 === 0 ? 'c-even' : 'c-odd';
 
-        html += '<div class="codon-unit ' + cls + '" title="Codon ' + (i + 1) + ' · ' + codon + ' → ' + aa + '">' +
+        html += '<div class="codon-unit ' + cls + '" title="Codon ' + (i + 1) + ' \xb7 ' + codon + ' → ' + aa + '">' +
                 '<div class="cn">' + codon + '</div>' +
                 '<div class="ca">' + aa + '</div>' +
                 '</div>';
       }
-
       html += '</div>';
     }
 
-    // Compact AA string below codon blocks
+    // Compact AA string
     html += '<div class="aa-string">';
     aas.forEach(function(aa, i) {
-      const otherAA    = i < otherAAs.length ? otherAAs[i] : null;
-      const isStop     = aa === '*';
-      const isNewStop  = isVar && isStop && (otherAA === null || otherAA !== '*');
-      const isFs       = isVar && type === 'frameshift' && i >= fsCodon;
+      const otherAA     = i < otherAAs.length ? otherAAs[i] : null;
+      const isStop      = aa === '*';
+      const isNewStop   = isVar && isStop && (otherAA === null || otherAA !== '*');
+      const isFs        = isVar && type === 'frameshift' && i >= fsCodon;
       const inRefFsZone = !isVar && type === 'frameshift' && i >= fsCodon;
-      const isChanged  = !isFs && !inRefFsZone && otherAA !== null && aa !== otherAA;
+      const isChanged   = !isFs && !inRefFsZone && otherAA !== null && aa !== otherAA;
 
       if      (isNewStop)  html += '<span class="aa-newstop">' + aa + '</span>';
       else if (isStop)     html += '<span class="aa-stop">' + aa + '</span>';
