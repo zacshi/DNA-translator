@@ -321,17 +321,17 @@
     <div class="seq-inputs">
       <div>
         <label class="field-label">
-          Reference Sequence
-          <span class="field-hint">DNA (T) or RNA (U) accepted</span>
+          Sequence / Variant Read
+          <span class="field-hint">DNA (T) or RNA (U) accepted — paste directly from IGV</span>
         </label>
-        <textarea id="refSeq" placeholder="e.g. ATGGCCATGGCGCCCAGAACTGAGGAGAAGTCC"></textarea>
+        <textarea id="varSeq" placeholder="Paste your read or variant sequence here (required)"></textarea>
       </div>
       <div>
         <label class="field-label">
-          Variant Sequence
-          <span class="field-hint">same region with variant applied</span>
+          Reference Sequence
+          <span class="field-hint">optional — enables side-by-side comparison</span>
         </label>
-        <textarea id="varSeq" placeholder="e.g. ATGGCCATGGCGCCCAGAACTGAGGAGAAGTGA"></textarea>
+        <textarea id="refSeq" placeholder="Leave blank to translate the sequence above on its own"></textarea>
       </div>
     </div>
     <div class="controls">
@@ -364,11 +364,11 @@
 
     <div class="card">
       <div class="card-title">Translation Comparison</div>
-      <div class="panel-labels">
+      <div class="panel-labels" id="panelLabels">
         <div class="panel-label label-ref">&#9654; Reference</div>
         <div class="panel-label label-var">&#9654; Variant</div>
       </div>
-      <div class="trans-grid">
+      <div class="trans-grid" id="transGrid">
         <div class="trans-panel" id="refPanel"></div>
         <div class="trans-panel" id="varPanel"></div>
       </div>
@@ -463,15 +463,15 @@
   function loadExample(key) {
     if (!key) return;
     const ex = EXAMPLES[key];
-    document.getElementById('refSeq').value = ex.ref;
     document.getElementById('varSeq').value = ex.var;
+    document.getElementById('refSeq').value = ex.ref;
     document.getElementById('frameOffset').value = ex.frame;
     document.getElementById('examplePicker').value = '';
   }
 
   function clearAll() {
-    document.getElementById('refSeq').value = '';
     document.getElementById('varSeq').value = '';
+    document.getElementById('refSeq').value = '';
     document.getElementById('frameOffset').value = '0';
     document.getElementById('errorBox').innerHTML = '';
     document.getElementById('results').style.display = 'none';
@@ -482,18 +482,82 @@
     const errEl = document.getElementById('errorBox');
     errEl.innerHTML = '';
 
-    const ref   = clean(document.getElementById('refSeq').value);
     const vari  = clean(document.getElementById('varSeq').value);
+    const ref   = clean(document.getElementById('refSeq').value);
     const frame = parseInt(document.getElementById('frameOffset').value);
 
-    if (!ref || !vari) {
-      errEl.innerHTML = '<div class="error-box">Please enter both a reference and a variant sequence.</div>';
+    if (!vari) {
+      errEl.innerHTML = '<div class="error-box">Please enter a sequence or variant read to translate.</div>';
       return;
     }
+    if (vari.length < 3 + frame) {
+      errEl.innerHTML = '<div class="error-box">Sequence is too short for the selected reading frame.</div>';
+      return;
+    }
+
+    // ── Single-sequence mode (no reference) ───────────────────────────────
+    if (!ref) {
+      const varCodons = getCodons(vari, frame);
+      const varAA     = varCodons.map(c => CODON[c] || '?');
+      const stopIdx   = varAA.indexOf('*');
+      const stopCount = varAA.filter(aa => aa === '*').length;
+
+      // Banner
+      let icon, title, sub, bannerCls;
+      if (stopCount === 0) {
+        icon = '▶'; title = 'Translation Complete';
+        sub = varCodons.length + ' codons — no stop codon detected in frame +' + (frame + 1);
+        bannerCls = 'banner-inframe';
+      } else {
+        icon = '⚑'; title = 'Stop Codon Detected';
+        sub = 'First stop at codon ' + (stopIdx + 1) + ' of ' + varCodons.length +
+              (stopCount > 1 ? ' (' + stopCount + ' total)' : '') +
+              ' — add a reference sequence above to classify impact';
+        bannerCls = 'banner-nonsense';
+      }
+      document.getElementById('banner').className = 'banner ' + bannerCls;
+      document.getElementById('banner').innerHTML =
+        '<span class="banner-icon">' + icon + '</span>' +
+        '<div><div class="banner-title">' + title + '</div>' +
+        '<div class="banner-sub">' + sub + '</div></div>';
+
+      // Stats
+      document.getElementById('stats').innerHTML = [
+        '<div class="stat">Length: <b>' + vari.length + ' bp</b></div>',
+        '<div class="stat">Frame: <b>+' + (frame + 1) + ' (offset ' + frame + ')</b></div>',
+        '<div class="stat">Codons: <b>' + varCodons.length + '</b></div>',
+        stopIdx >= 0 ? '<div class="stat stat-warn">First stop: <b>codon ' + (stopIdx + 1) + '</b></div>' : '',
+        stopCount > 0 ? '<div class="stat stat-warn">Stop codons: <b>' + stopCount + '</b></div>' : '',
+      ].join('');
+
+      // Single panel — full width
+      document.getElementById('panelLabels').innerHTML =
+        '<div class="panel-label label-var">&#9654; Translation &middot; Frame +' + (frame + 1) + ' (offset ' + frame + ')</div>';
+      document.getElementById('transGrid').style.gridTemplateColumns = '1fr';
+      document.getElementById('refPanel').innerHTML = '';
+      document.getElementById('refPanel').style.display = 'none';
+      document.getElementById('varPanel').style.display = 'block';
+      document.getElementById('varPanel').innerHTML =
+        renderPanel(varCodons, varAA, [], false, -1, 'single');
+
+      document.getElementById('results').style.display = 'block';
+      document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
+
+    // ── Dual-sequence mode ────────────────────────────────────────────────
     if (ref.length < 3 + frame) {
       errEl.innerHTML = '<div class="error-box">Reference sequence is too short for the selected reading frame.</div>';
       return;
     }
+
+    // Restore two-column layout
+    document.getElementById('panelLabels').innerHTML =
+      '<div class="panel-label label-ref">&#9654; Reference</div>' +
+      '<div class="panel-label label-var">&#9654; Variant</div>';
+    document.getElementById('transGrid').style.gridTemplateColumns = '1fr 1fr';
+    document.getElementById('refPanel').style.display = 'block';
+    document.getElementById('varPanel').style.display = 'block';
 
     // Identical sequences
     if (ref === vari) {
@@ -576,7 +640,7 @@
     document.getElementById('stats').innerHTML = [
       '<div class="stat">Ref: <b>' + ref.length + ' bp</b></div>',
       '<div class="stat">Var: <b>' + vari.length + ' bp</b></div>',
-      '<div class="stat">Δ length: <b>' + (lenDiff >= 0 ? '+' : '') + lenDiff + ' bp</b></div>',
+      '<div class="stat">&#916; length: <b>' + (lenDiff >= 0 ? '+' : '') + lenDiff + ' bp</b></div>',
       '<div class="stat">Frame offset: <b>' + frame + '</b></div>',
       '<div class="stat">Ref codons: <b>' + refCodons.length + '</b></div>',
       '<div class="stat">Var codons: <b>' + varCodons.length + '</b></div>',
