@@ -116,6 +116,25 @@
 
     .example-group { margin-left: auto; display: flex; gap: 8px; align-items: center; }
     .label-muted { font-size: 0.78rem; color: #a0aec0; }
+    .label-inline { font-size: 0.8rem; font-weight: 600; color: #4a5568; }
+
+    .direction-header {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #a0aec0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0 6px;
+    }
+    .direction-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
 
     .error-box {
       margin-top: 10px;
@@ -360,6 +379,12 @@
       </div>
     </div>
     <div class="controls">
+      <span class="label-inline">Direction:</span>
+      <select id="direction">
+        <option value="fwd">Forward (5'→3')</option>
+        <option value="rc">Reverse complement (3'→5')</option>
+        <option value="both">Both directions</option>
+      </select>
       <button class="btn btn-primary" onclick="analyze()">Analyze</button>
       <button class="btn btn-ghost" onclick="clearAll()">Clear</button>
       <div class="example-group">
@@ -443,6 +468,11 @@
     return s.toUpperCase().replace(/\s/g, '').replace(/[^AUGCT]/g, '').replace(/U/g, 'T');
   }
 
+  function reverseComplement(dna) {
+    const comp = { A: 'T', T: 'A', C: 'G', G: 'C' };
+    return dna.split('').reverse().map(function(b) { return comp[b] || b; }).join('');
+  }
+
   function getCodons(dna, frame) {
     const out = [];
     for (let i = frame; i + 2 < dna.length; i += 3)
@@ -468,6 +498,7 @@
   function clearAll() {
     document.getElementById('varSeq').value = '';
     document.getElementById('refSeq').value = '';
+    document.getElementById('direction').value = 'fwd';
     document.getElementById('errorBox').innerHTML = '';
     document.getElementById('results').style.display = 'none';
   }
@@ -479,6 +510,7 @@
 
     const vari = clean(document.getElementById('varSeq').value);
     const ref  = clean(document.getElementById('refSeq').value);
+    const dir  = document.getElementById('direction').value; // 'fwd' | 'rc' | 'both'
 
     if (!vari) {
       errEl.innerHTML = '<div class="error-box">Please enter a sequence or variant read to translate.</div>';
@@ -489,11 +521,10 @@
       return;
     }
 
-    const hasBoth    = ref.length >= 3 && ref !== vari;
-    const isIdentical = ref.length >= 3 && ref === vari;
-
-    // Sequence-level stats shown once at the top
-    if (hasBoth) {
+    // Sequence-level stats (based on raw input lengths, shown once)
+    const hasBothInput  = ref.length >= 3 && ref !== vari;
+    const isIdentical   = ref.length >= 3 && ref === vari;
+    if (hasBothInput) {
       const lenDiff = vari.length - ref.length;
       document.getElementById('seqStats').innerHTML = [
         '<div class="stat">Ref: <b>' + ref.length + ' bp</b></div>',
@@ -508,11 +539,32 @@
         '<div class="stat">Length: <b>' + vari.length + ' bp</b></div>';
     }
 
-    // Build all 3 frame sections
-    let html = '';
-    for (let frame = 0; frame < 3; frame++) {
-      html += buildFrameSection(vari, ref, frame, hasBoth);
+    // Resolve sequences per direction
+    var directions = [];
+    if (dir === 'fwd' || dir === 'both') {
+      directions.push({ seq: vari, refSeq: ref, label: "Forward (5'→ 3')" });
     }
+    if (dir === 'rc' || dir === 'both') {
+      directions.push({
+        seq: reverseComplement(vari),
+        refSeq: ref ? reverseComplement(ref) : '',
+        label: "Reverse complement (3'→ 5')"
+      });
+    }
+
+    var showHeaders = directions.length > 1;
+
+    // Build all frame sections
+    var html = '';
+    directions.forEach(function(d) {
+      var hasBoth = d.refSeq.length >= 3 && d.refSeq !== d.seq;
+      if (showHeaders) {
+        html += '<div class="direction-header">' + d.label + '</div>';
+      }
+      for (var frame = 0; frame < 3; frame++) {
+        html += buildFrameSection(d.seq, d.refSeq, frame, hasBoth);
+      }
+    });
     document.getElementById('framesContainer').innerHTML = html;
 
     document.getElementById('results').style.display = 'block';
